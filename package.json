@@ -13,12 +13,28 @@
   "author": "Jerickson Mayor",
   "license": "Apache-2.0",
   "devDependencies": {
-    "cordova-android": "^13.0.0"
+    "cordova-android": "^13.0.0",
+    "cordova-androidx-build": "^1.0.4",
+    "cordova-plugin-android-tv": "github:elyeandre/cordova-plugin-android-tv",
+    "cordova-plugin-app-launcher": "github:elyeandre/cordova-plugin-app-launcher",
+    "cordova-plugin-background-mode": "github:elyeandre/cordova-plugin-background-mode",
+    "cordova-plugin-cleartext": "^1.0.0",
+    "cordova-plugin-device": "^3.0.0",
+    "cordova-plugin-fetch": "github:elyeandre/cordova-plugin-fetch",
+    "cordova-plugin-network-information": "^3.0.0"
   },
   "cordova": {
     "platforms": [
       "android"
     ],
-    "plugins": {}
+    "plugins": {
+      "cordova-plugin-fetch": {},
+      "cordova-plugin-app-launcher": {},
+      "cordova-plugin-cleartext": {},
+      "cordova-plugin-android-tv": {},
+      "cordova-plugin-device": {},
+      "cordova-plugin-network-information": {},
+      "cordova-plugin-background-mode": {}
+    }
   }
 }
