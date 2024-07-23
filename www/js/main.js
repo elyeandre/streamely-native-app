@@ -92,6 +92,219 @@ const providersObject = providers
   .enableConsistentIpForRequests()
   .addBuiltinProviders()
   .addSource({
+    id: 'moviesapi',
+    name: 'moviesapi',
+    rank: 750,
+    flags: [providers.flags.IP_LOCKED],
+    async scrapeMovie(ctx) {
+      function decryptJsScript(jsonStr, password) {
+        const decryptedText = CryptoJS.AES.decrypt(jsonStr, password, {
+          format: {
+            parse: (jsonStr) => {
+              const j = JSON.parse(jsonStr);
+              console.log(j);
+              const cipherParams = CryptoJS.lib.CipherParams.create({
+                ciphertext: CryptoJS.enc.Base64.parse(j.ct)
+              });
+              if (j.iv) cipherParams.iv = CryptoJS.enc.Hex.parse(j.iv);
+              if (j.s) cipherParams.salt = CryptoJS.enc.Hex.parse(j.s);
+              return cipherParams;
+            }
+          }
+        });
+        console.log(JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8)));
+        return JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8));
+      }
+      const baseUrl = 'https://moviesapi.club';
+      const decryptionKey = 'KB3c1lgTx6cHL3W';
+      const configRegex = /var\s+config\s*=\s*(\{[^]*?\});/;
+      const jsScriptRegex = /JScripts\s*=\s*(['"])(.*?)\1/;
+
+      const searchResults = await ctx.proxiedFetcher(`/movie/${ctx.media.tmdbId}`, {
+        baseUrl: baseUrl,
+        headers: {
+          Referer: baseUrl,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+        }
+      });
+      console.log(searchResults);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(searchResults, 'text/html');
+      const titleTag = doc.querySelector('title').textContent;
+      if (titleTag.includes('404')) throw new providers.NotFoundError('no search results match');
+
+      const embedUrl = doc.querySelector('.vidframe').getAttribute('src');
+
+      const embedPage = await ctx.proxiedFetcher(embedUrl, {
+        headers: {
+          Referer: baseUrl,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+        }
+      });
+      console.log(embedPage);
+      const jsScript = embedPage.match(jsScriptRegex)[2];
+      if (!jsScript) throw new Error('jsScript not found');
+      const decryptedJsScript = decryptJsScript(jsScript, decryptionKey);
+      console.log(decryptedJsScript);
+      const jwConfig = decryptedJsScript.match(configRegex)[1];
+      const getConfig = new Function('return ' + jwConfig + ';');
+      const configObject = getConfig();
+
+      console.log(configObject);
+
+      const thumbnailSource = configObject.tracks.find((track) => track.kind === 'thumbnails');
+
+      let thumbnailTrack;
+      if (thumbnailSource) {
+        thumbnailTrack = {
+          type: 'vtt',
+          url: thumbnailSource.file
+        };
+      }
+
+      const captions = [];
+      configObject.tracks.forEach((track) => {
+        if (track.kind !== 'captions') return;
+        const type = getCaptionTypeFromUrl(track.file);
+        if (!type) return;
+        const language = labelToLanguageCode(track.label.split(' ')[0]);
+        if (!language) return;
+        captions.push({
+          id: track.file,
+          language,
+          hasCorsRestrictions: true,
+          type,
+          url: track.file
+        });
+      });
+      console.log(captions);
+
+      return {
+        embeds: [],
+        stream: [
+          {
+            id: 'primary',
+            type: 'hls',
+            playlist: configObject.sources[0]?.file,
+            poster: configObject?.image,
+            flags: [providers.flags.IP_LOCKED],
+            captions: captions,
+            headers: {
+              Referer: baseUrl,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+            },
+            thumbnailTrack: thumbnailSource
+          }
+        ]
+      };
+    },
+    async scrapeShow(ctx) {
+      function decryptJsScript(jsonStr, password) {
+        const decryptedText = CryptoJS.AES.decrypt(jsonStr, password, {
+          format: {
+            parse: (jsonStr) => {
+              const j = JSON.parse(jsonStr);
+              console.log(j);
+              const cipherParams = CryptoJS.lib.CipherParams.create({
+                ciphertext: CryptoJS.enc.Base64.parse(j.ct)
+              });
+              if (j.iv) cipherParams.iv = CryptoJS.enc.Hex.parse(j.iv);
+              if (j.s) cipherParams.salt = CryptoJS.enc.Hex.parse(j.s);
+              return cipherParams;
+            }
+          }
+        });
+        console.log(JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8)));
+        return JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8));
+      }
+      const baseUrl = 'https://moviesapi.club';
+      const decryptionKey = 'KB3c1lgTx6cHL3W';
+      const configRegex = /var\s+config\s*=\s*(\{[^]*?\});/;
+      const jsScriptRegex = /JScripts\s*=\s*(['"])(.*?)\1/;
+
+      const searchResults = await ctx.proxiedFetcher(
+        `/tv/${ctx.media.tmdbId}-${ctx.media.season.number}-${ctx.media.episode.number}`,
+        {
+          baseUrl: baseUrl,
+          headers: {
+            Referer: baseUrl,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+          }
+        }
+      );
+      console.log(searchResults);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(searchResults, 'text/html');
+      const titleTag = doc.querySelector('title').textContent;
+      if (titleTag.includes('404')) throw new providers.NotFoundError('no search results match');
+
+      const embedUrl = doc.querySelector('.vidframe').getAttribute('src');
+
+      const embedPage = await ctx.proxiedFetcher(embedUrl, {
+        headers: {
+          Referer: baseUrl,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+        }
+      });
+      console.log(embedPage);
+      const jsScript = embedPage.match(jsScriptRegex)[2];
+      if (!jsScript) throw new Error('jsScript not found');
+      const decryptedJsScript = decryptJsScript(jsScript, decryptionKey);
+      console.log(decryptedJsScript);
+      const jwConfig = decryptedJsScript.match(configRegex)[1];
+      const getConfig = new Function('return ' + jwConfig + ';');
+      const configObject = getConfig();
+
+      console.log(configObject);
+
+      const thumbnailSource = configObject.tracks.find((track) => track.kind === 'thumbnails');
+
+      let thumbnailTrack;
+      if (thumbnailSource) {
+        thumbnailTrack = {
+          type: 'vtt',
+          url: thumbnailSource.file
+        };
+      }
+
+      const captions = [];
+      configObject.tracks.forEach((track) => {
+        if (track.kind !== 'captions') return;
+        const type = getCaptionTypeFromUrl(track.file);
+        if (!type) return;
+        const language = labelToLanguageCode(track.label.split(' ')[0]);
+        if (!language) return;
+        captions.push({
+          id: track.file,
+          language,
+          hasCorsRestrictions: true,
+          type,
+          url: track.file
+        });
+      });
+      console.log(captions);
+
+      return {
+        embeds: [],
+        stream: [
+          {
+            id: 'primary',
+            type: 'hls',
+            playlist: configObject.sources[0]?.file,
+            poster: configObject?.image,
+            flags: [providers.flags.IP_LOCKED],
+            captions: captions,
+            headers: {
+              Referer: baseUrl,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
+            },
+            thumbnailTrack: thumbnailSource
+          }
+        ]
+      };
+    }
+  })
+  .addSource({
     // add your own source
     id: '1flix',
     name: '1flix',
