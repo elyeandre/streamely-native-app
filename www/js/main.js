@@ -96,7 +96,7 @@ const providersObject = providers
     id: '1flix',
     name: '1flix',
     rank: 800,
-    flags: [],
+    flags: [providers.flags.CORS_ALLOWED],
     async scrapeMovie(ctx) {
       const baseUrl = 'https://1flix.to';
 
