@@ -481,14 +481,9 @@ const providersObject = providers
     async scrape(ctx) {
       const parsedUrl = new URL(ctx.url);
       const dataPath = parsedUrl.pathname.split('/');
+      const decryptorApi = 'https://ely-mega-extractor.vercel.app';
       const dataId = dataPath[dataPath.length - 1];
-      // const streamRes = await ctx.proxiedFetcher(`${parsedUrl.origin}/embed-1/ajax/e-1/getSources?id=${dataId}`, {
-      //   headers: {
-      //     Referer: parsedUrl.origin,
-      //     'X-Requested-With': 'XMLHttpRequest'
-      //   }
-      // });
-      const streamRes = await ctx.fetcher(`${parsedUrl.origin}/embed-1/ajax/e-1/getSources?id=${dataId}`);
+      const streamRes = await ctx.fetcher(`${decryptorApi}/?id=${dataId}`);
       console.log(streamRes);
       const captions = [];
       streamRes.tracks.forEach((track) => {
@@ -530,13 +525,9 @@ const providersObject = providers
     async scrape(ctx) {
       const parsedUrl = new URL(ctx.url);
       const dataPath = parsedUrl.pathname.split('/');
+      const decryptorApi = 'https://ely-mega-extractor.vercel.app';
       const dataId = dataPath[dataPath.length - 1];
-      const streamRes = await ctx.proxiedFetcher(`${parsedUrl.origin}/embed-1/ajax/e-1/getSources?id=${dataId}`, {
-        headers: {
-          Referer: parsedUrl.origin,
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const streamRes = await ctx.fetcher(`${decryptorApi}/?id=${dataId}`);
       console.log(streamRes);
       const captions = [];
       streamRes.tracks.forEach((track) => {
