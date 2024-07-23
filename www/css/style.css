@@ -1,18 +1,18 @@
 @font-face {
   font-family: 'Poppins';
-  src: url('../lib/Poppins/Poppins-Regular.ttf') format('truetype');
+  src: url('../lib/poppins/Poppins-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: 'Poppins';
-  src: url('../lib/Poppins/Poppins-Bold.ttf') format('truetype'); /* Adjust the path for the bold variant */
+  src: url('../lib/poppins/Poppins-Bold.ttf') format('truetype'); /* Adjust the path for the bold variant */
   font-weight: bold;
   font-style: normal;
 }
 @font-face {
   font-family: 'Poppins';
-  src: url('../lib/Poppins/Poppins-Italic.ttf') format('truetype'); /* Adjust the path for the bold variant */
+  src: url('../lib/poppins/Poppins-Italic.ttf') format('truetype'); /* Adjust the path for the bold variant */
   font-weight: normal;
   font-style: italic;
 }
