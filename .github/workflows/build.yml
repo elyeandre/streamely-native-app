@@ -1,0 +1,79 @@
+name: Build Streamely App
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'oracle'
+          java-version: '17'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+        name: List the state of node modules
+        continue-on-error: true
+        run: npm list
+
+      - name: Cache Gradle files
+        uses: actions/cache@v2
+        with:
+          path: |
+           ~/.gradle/caches
+           ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Add Android platform
+        run: cordova platform add android
+
+      - name: Install app dependencies
+        run: npm install
+
+      - name: Decrypt Keystore
+        run: |
+          echo "${{ secrets.STREAMELY_RELEASE_KEY }}" > streamely.release-key.asc
+          gpg -d --passphrase "${{ secrets.STREAMELY_RELEASE_PASSPHRASE }}" --batch streamely.release-key.asc > streamely-release-key.jks
+      - name: Build release APK using Cordova
+        run: cordova build android --release -- --packageType=apk --keystore=streamely-release-key.jks --storePassword=${{ secrets.KEYSTORE_PASSWORD }} --alias=${{ secrets.KEY_ALIAS }} --password=${{ secrets.KEY_PASSWORD }}
+        
+      - name: release-please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: node
+      - name: Upload Release Artifact
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+        run: gh release upload ${{ steps.release.outputs.tag_name }} ./platforms/android/app/build/outputs/apk/release/app-release.apk
