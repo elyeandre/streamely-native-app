@@ -21,7 +21,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.MY_PAT }}
+          token: ${{ secrets.PAT_TOKEN }}
           repository: elyeandre/streamely-native-app
           event-type: build-project 
           client-payload: '{"upload_url": "${{ steps.release.outputs.upload_url }}", "tag_name": "${{ steps.release.outputs.tag_name }}" }'     
