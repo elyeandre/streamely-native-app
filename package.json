@@ -1,7 +1,7 @@
 {
   "name": "online.streamely.www",
   "displayName": "Streamely",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Stream your favorite movies and TV shows for free, without ads. Enjoy a quick and hassle-free entertainment experience.",
   "main": "index.js",
   "scripts": {
