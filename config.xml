@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="online.streamely.www" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Streamely</name>
-    <description>Sample Apache Cordova App</description>
-    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
-        Apache Cordova Team
+    <description>A simple app that allows users to stream movies and TV shows for free directly on their Android devices without ads.</description>
+    <author email="jericksonmayor@gmail.com">
+    elyeandre
     </author>
     <content src="index.html" />
     <allow-navigation href="*"/>
