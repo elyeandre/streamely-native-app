@@ -1,6 +1,8 @@
 name: Build Streamely App
 
 on:
+  pull_request:
+    branches: [main, dev]
   repository_dispatch:
     types: [build-project]
 jobs:
