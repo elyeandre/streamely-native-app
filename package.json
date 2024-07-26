@@ -5,7 +5,8 @@
   "description": "A simple app that allows users to stream movies and TV shows for free directly on their Android devices without ads.",
   "main": "index.js",
   "scripts": {
-    "debug": "cordova run android --device"
+    "debug": "cordova run android --debug",
+    "build": "cordova build android"
   },
   "keywords": [
     "ecosystem:cordova"
