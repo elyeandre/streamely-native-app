@@ -1443,12 +1443,28 @@ function makeFullUrl(url, ops) {
 
 function serializeBody(body) {
   if (body === void 0 || typeof body === 'string' || body instanceof URLSearchParams || body instanceof FormData) {
+    if (body instanceof FormData) {
+      const params = {};
+      body.forEach((value, key) => {
+        params[key] = value;
+      });
+      return {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        body: params
+      };
+    }
     if (body instanceof URLSearchParams) {
+      const params = {};
+      body.forEach((value, key) => {
+        params[key] = value;
+      });
       return {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: body.toString()
+        body: params
       };
     }
     return {
@@ -1460,45 +1476,63 @@ function serializeBody(body) {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body
   };
 }
 
 function getHeaders(list, res) {
   const output = new Headers();
-  list.forEach((header) => {
-    const realHeader = header.toLowerCase();
-    const value = res.headers.get(realHeader);
-    const extraValue = res.extraHeaders?.get(realHeader);
-    if (!value) return;
-    output.set(realHeader, extraValue ?? value);
-  });
+  if (res.headers && list) {
+    list.forEach((header) => {
+      const realHeader = header.toLowerCase();
+      const value = res.headers[realHeader];
+      console.log('realheader', realHeader);
+      console.log('value', value);
+      if (value) {
+        output.set(realHeader, value);
+      }
+    });
+  }
   return output;
 }
 
 function makeCordovaFetcher() {
-  const fetcher = async (url, ops) => {
-    const fullUrl = makeFullUrl(url, ops);
-    const serializedBody = serializeBody(ops.body);
-    const res = await cordovaFetch(fullUrl, {
-      method: ops.method,
-      headers: {
-        ...serializedBody.headers,
-        ...ops.headers
-      },
-      body: serializedBody.body
-    });
-    let body;
-    const isJson = res.headers.get('content-type')?.includes('application/json');
-    if (isJson) body = await res.json();
-    else body = await res.text();
+  const fetcher = (url, ops) => {
+    return new Promise((resolve, reject) => {
+      const fullUrl = makeFullUrl(url, ops);
+      const serializedBody = serializeBody(ops.body);
+      console.log('serializeBody', serializedBody.body);
+      console.log('ops:', ops);
 
-    return {
-      body,
-      finalUrl: res.extraUrl ?? res.url,
-      headers: getHeaders(ops.readHeaders, res),
-      statusCode: res.status
-    };
+      cordova.plugin.http.sendRequest(
+        fullUrl,
+        {
+          method: ops.method,
+          headers: {
+            ...serializedBody.headers,
+            ...ops.headers
+          },
+          data: serializedBody.body
+        },
+        (res) => {
+          console.log('getHeaders:', getHeaders(ops.readHeaders, res));
+          console.log('Result:', res);
+          const customizeResult = {
+            body: res.headers['content-type'].includes('application/json') ? JSON.parse(res.data) : res.data,
+            finalUrl: res.extraUrl ?? res.url,
+            headers: getHeaders(ops.readHeaders, res),
+            statusCode: res.status
+          };
+          console.log('customizeResult', customizeResult);
+          console.log('getHeaders', customizeResult.headers?.get('date'));
+          resolve(customizeResult);
+        },
+        (err) => {
+          console.error(err);
+          reject(err);
+        }
+      );
+    });
   };
 
   return fetcher;
@@ -1522,8 +1556,6 @@ function makeSimpleProxyFetcher(proxyUrl) {
       res.extraHeaders = new Headers();
       Object.entries(responseHeaderMap).forEach((entry) => {
         const value = res.headers.get(entry[0]);
-        if (!value) return;
-        res.extraHeaders?.set(entry[0].toLowerCase(), value);
       });
       res.extraUrl = res.headers.get('X-Final-Destination') ?? res.url;
       return res;
@@ -1578,11 +1610,7 @@ async function runProviders(media) {
     console.log(response);
 
     if (!response || (!response.stream && response.embeds.length === 0 && response.stream.length === 0)) {
-      showModal(
-        'exclamation',
-        'Oops! Scraping Error',
-        "Sorry, we couldn't retrieve any media. Please check for any typos and try again."
-      );
+      showModal('exclamation', 'Oops! Scraping Error', "Sorry, we couldn't retrieve any media.");
       return;
     }
     // const response = await providers.runAll({ media: media, sourceOrder: [`${selectedSource}`], events: events });
@@ -1846,10 +1874,52 @@ function handleError(error) {
   } else {
     hideModal();
     // if (!error.message.includes('Canceled')) {
-    showModal('exclamation', 'Error', error);
+    // }
+    // Usage
+    const status = error.status ?? '';
+    const errorMessage = getErrorMessage(error);
+    showModal('exclamation', `Error ${status}`, errorMessage);
+    // const htmlRegex = /<[^>]+>/;
+    // const titleRegex = /<title>([^<]*)<\/title>/i;
+
+    // if (htmlRegex.test(errorMessage)) {
+    //   const titleMatch = errorMessage.match(titleRegex);
+    //   const title = titleMatch ? titleMatch[1] : 'No title found in HTML error';
+    //   errorMessage = title;
     // }
   }
 }
+function getErrorMessage(error) {
+  switch (true) {
+    case error?.status && error.status !== '':
+      try {
+        return window.L.getReasonPhrase(error.status);
+      } catch (e) {
+        if (error?.error && error.error !== '') return error.error;
+        else return 'Unknown error';
+      }
+
+    case error?.status === '':
+      if (error?.error && error.error !== '') return error.error;
+      else return 'Unknown error';
+
+    default:
+      return error.message ?? 'Unknown error';
+  }
+}
+
+// function getErrorMessage(error) {
+//   switch (true) {
+//     case error?.error && error.error !== '':
+//       return error.error;
+
+//     case error.error === '':
+//       return 'Unknown error';
+
+//     default:
+//       return error.message;
+//   }
+// }
 
 window.addEventListener('load', () => {
   const currentTab = activeTab();
@@ -2606,8 +2676,9 @@ async function runEmbedScraper(embed, media) {
   } catch (err) {
     // console.log('Failed to scrape embed', err, 'Dismiss');
     hideSpinner();
-    showResultModal('exclamation', 'Error', err);
-
+    const status = err.status ?? '';
+    const errorMessage = getErrorMessage(err);
+    showResultModal('exclamation', `Error ${status}`, errorMessage);
     //   handleError(error);
     //   console.error('Error', error);
     //   hideScrapingScreen();

@@ -16,12 +16,14 @@
   "devDependencies": {
     "cordova-android": "^13.0.0",
     "cordova-androidx-build": "^1.0.4",
+    "cordova-plugin-advanced-http": "^3.3.1",
     "cordova-plugin-android-tv": "github:elyeandre/cordova-plugin-android-tv",
     "cordova-plugin-app-launcher": "github:elyeandre/cordova-plugin-app-launcher",
     "cordova-plugin-background-mode": "github:elyeandre/cordova-plugin-background-mode",
     "cordova-plugin-cleartext": "^1.0.0",
     "cordova-plugin-device": "^3.0.0",
     "cordova-plugin-fetch": "github:elyeandre/cordova-plugin-fetch",
+    "cordova-plugin-file": "^8.1.0",
     "cordova-plugin-network-information": "^3.0.0"
   },
   "cordova": {
@@ -35,7 +37,10 @@
       "cordova-plugin-android-tv": {},
       "cordova-plugin-device": {},
       "cordova-plugin-network-information": {},
-      "cordova-plugin-background-mode": {}
+      "cordova-plugin-background-mode": {},
+      "cordova-plugin-advanced-http": {
+        "ANDROIDBLACKLISTSECURESOCKETPROTOCOLS": "SSLv3,TLSv1"
+      }
     }
   }
 }
