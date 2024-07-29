@@ -2251,7 +2251,7 @@ const movieDebounceSubmit = debounce(
     // Validate inputs
     if (status && movieHasSearched) {
       startButtonAnimation('Movie');
-      // overlay.classList.add('active');
+      overlay.classList.add('active');
       try {
         const mediaDetails = await getMovieMediaDetails(currentMovieTmdbId);
         runProviders(mediaDetails);
