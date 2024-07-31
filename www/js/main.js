@@ -2382,7 +2382,7 @@ async function runEmbedScraper(embed, media) {
 
     console.log('Media found:', response);
     console.log('Source ID:', response?.sourceId || selectedSource);
-    console.log('Embed ID:', response?.embedId);
+    console.log('Embed ID:', response?.embedId || embed.embedId);
 
     document.getElementById('movieSubmitBtn').classList.remove('validated');
     document.getElementById('tvSubmitBtn').classList.remove('validated');
