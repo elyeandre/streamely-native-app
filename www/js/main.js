@@ -1481,28 +1481,42 @@ function getHeaders(list, res) {
 }
 
 function makeCordovaFetcher() {
-  const fetcher = async (url, ops) => {
-    const fullUrl = makeFullUrl(url, ops);
-    const serializedBody = serializeBody(ops.body);
-    const res = await cordovaFetch(fullUrl, {
-      method: ops.method,
-      headers: {
-        ...serializedBody.headers,
-        ...ops.headers
-      },
-      body: serializedBody.body
-    });
-    let body;
-    const isJson = res.headers.get('content-type')?.includes('application/json');
-    if (isJson) body = await res.json();
-    else body = await res.text();
+  const fetcher = (url, ops) => {
+    return new Promise((resolve, reject) => {
+      const fullUrl = makeFullUrl(url, ops);
+      const serializedBody = serializeBody(ops.body);
+      console.log('serializeBody', serializedBody.body);
+      console.log('ops:', ops);
 
-    return {
-      body,
-      finalUrl: res.extraUrl ?? res.url,
-      headers: getHeaders(ops.readHeaders, res),
-      statusCode: res.status
-    };
+      cordova.plugin.http.sendRequest(
+        fullUrl,
+        {
+          method: ops.method,
+          headers: {
+            ...serializedBody.headers,
+            ...ops.headers
+          },
+          data: serializedBody.body
+        },
+        (res) => {
+          console.log('getHeaders:', getHeaders(ops.readHeaders, res));
+          console.log('Result:', res);
+          const customizeResult = {
+            body: res.headers['content-type'].includes('application/json') ? JSON.parse(res.data) : res.data,
+            finalUrl: res.extraUrl ?? res.url,
+            headers: getHeaders(ops.readHeaders, res),
+            statusCode: res.status
+          };
+          console.log('customizeResult', customizeResult);
+          console.log('getHeaders', customizeResult.headers?.get('date'));
+          resolve(customizeResult);
+        },
+        (err) => {
+          console.error(err);
+          reject(err);
+        }
+      );
+    });
   };
 
   return fetcher;
