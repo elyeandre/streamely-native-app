@@ -1596,11 +1596,7 @@ async function runProviders(media) {
     console.log(response);
 
     if (!response || (!response.stream && response.embeds.length === 0 && response.stream.length === 0)) {
-      showModal(
-        'exclamation',
-        'Oops! Scraping Error',
-        "Sorry, we couldn't retrieve any media. Please check for any typos and try again."
-      );
+      showModal('exclamation', 'Oops! Scraping Error', "Sorry, we couldn't retrieve any media.");
       return;
     }
     // const response = await providers.runAll({ media: media, sourceOrder: [`${selectedSource}`], events: events });
