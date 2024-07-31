@@ -1860,8 +1860,28 @@ function handleError(error) {
   } else {
     hideModal();
     // if (!error.message.includes('Canceled')) {
-    showModal('exclamation', 'Error', error);
     // }
+    const status = error.status ?? '';
+    const errorMessage = getErrorMessage(error);
+    showModal('exclamation', `Error ${status}`, errorMessage);
+  }
+}
+function getErrorMessage(error) {
+  switch (true) {
+    case error?.status && error.status !== '':
+      try {
+        return window.L.getReasonPhrase(error.status);
+      } catch (e) {
+        if (error?.error && error.error !== '') return error.error;
+        else return 'Unknown error';
+      }
+
+    case error?.status === '':
+      if (error?.error && error.error !== '') return error.error;
+      else return 'Unknown error';
+
+    default:
+      return error.message ?? 'Unknown error';
   }
 }
 
@@ -2620,8 +2640,9 @@ async function runEmbedScraper(embed, media) {
   } catch (err) {
     // console.log('Failed to scrape embed', err, 'Dismiss');
     hideSpinner();
-    showResultModal('exclamation', 'Error', err);
-
+    const status = err.status ?? '';
+    const errorMessage = getErrorMessage(err);
+    showResultModal('exclamation', `Error ${status}`, errorMessage);
     //   handleError(error);
     //   console.error('Error', error);
     //   hideScrapingScreen();
