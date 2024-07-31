@@ -1466,13 +1466,17 @@ function serializeBody(body) {
 
 function getHeaders(list, res) {
   const output = new Headers();
-  list.forEach((header) => {
-    const realHeader = header.toLowerCase();
-    const value = res.headers.get(realHeader);
-    const extraValue = res.extraHeaders?.get(realHeader);
-    if (!value) return;
-    output.set(realHeader, extraValue ?? value);
-  });
+  if (res.headers && list) {
+    list.forEach((header) => {
+      const realHeader = header.toLowerCase();
+      const value = res.headers[realHeader];
+      console.log('realheader', realHeader);
+      console.log('value', value);
+      if (value) {
+        output.set(realHeader, value);
+      }
+    });
+  }
   return output;
 }
 
