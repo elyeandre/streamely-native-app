@@ -1442,26 +1442,75 @@ function makeFullUrl(url, ops) {
 }
 
 function serializeBody(body) {
-  if (body === void 0 || typeof body === 'string' || body instanceof URLSearchParams || body instanceof FormData) {
+  if (
+    body === undefined ||
+    body === null ||
+    typeof body === 'string' ||
+    body instanceof URLSearchParams ||
+    body instanceof FormData ||
+    body instanceof Uint8Array ||
+    body instanceof ArrayBuffer ||
+    typeof body === 'object'
+  ) {
+    if (body === undefined || body === null) {
+      // No body to process
+      return {
+        headers: {},
+        body: null
+      };
+    }
+    if (body instanceof Uint8Array || body instanceof ArrayBuffer) {
+      cordova.plugin.http.setDataSerializer('raw');
+      return {
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body // Directly assign the raw data
+      };
+    }
+    if (body instanceof FormData) {
+      cordova.plugin.http.setDataSerializer('multipart');
+      return {
+        headers: {}, // Let the plugin set the correct Content-Type
+        body
+      };
+    }
+
     if (body instanceof URLSearchParams) {
+      cordova.plugin.http.setDataSerializer('urlencoded');
+      const params = {};
+      body.forEach((value, key) => {
+        params[key] = value;
+      });
       return {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
+        body: params
+      };
+    }
+    if (typeof body === 'string') {
+      cordova.plugin.http.setDataSerializer('utf8');
+      return {
+        headers: {
+          'Content-Type': 'text/plain'
+        },
         body: body.toString()
       };
     }
-    return {
-      headers: {},
-      body
-    };
+    if (Array.isArray(body) || typeof body === 'object') {
+      cordova.plugin.http.setDataSerializer('json');
+      return {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body // Directly assign the object or array, the plugin will handle JSON serialization
+      };
+    }
   }
-  return {
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  };
+
+  // If the body type is not handled
+  throw new Error('Unsupported body type');
 }
 
 function getHeaders(list, res) {
