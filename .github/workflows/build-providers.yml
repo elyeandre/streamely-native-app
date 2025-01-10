@@ -31,10 +31,7 @@ jobs:
 
       - name: Install packages
         run: pnpm install --frozen-lockfile
-
-      - name: Build provider library
-        run: |
-          pnpm run build
+        working-directory: providers
           
       - name: Build provider umd module
         run: webpack --config build-umd-module.js
