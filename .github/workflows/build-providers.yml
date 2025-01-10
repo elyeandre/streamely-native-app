@@ -18,33 +18,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-           
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9.14.4
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 
-           
-      - name: Install pnpm
-        run: |
-          npm i -g pnpm
-           
-      - name: Install dependencies
-        run: |
-          pnpm install
-        working-directory: providers
+          node-version: 20
+          cache: "pnpm"
 
-      - name: Install webpack-cli (if needed)
-        run: |
-          pnpm install -D webpack-cli
-        working-directory: providers
-
-      - name: Build provider library
-        run: |
-          pnpm build
-        working-directory: providers
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
           
       - name: Build provider umd module
-        run: npx webpack --config build-umd-module.js
+        run: webpack --config build-umd-module.js
         working-directory: ${{ github.workspace }}
 
       - name: Upload providers umd module to API
