@@ -31,7 +31,7 @@ jobs:
 
 
       - name: Install terser-webpack-plugin
-        run: pnpm add terser-webpack-plugin --dev
+        run: pnpm add terser-webpack-plugin -D
         working-directory: providers
 
       - name: Install packages
