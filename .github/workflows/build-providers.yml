@@ -45,7 +45,7 @@ jobs:
           
       - name: Build provider umd module
         run: npx webpack --config build-umd-module.js
-        working-directory: providers
+        working-directory: ${{ github.workspace }}
 
       - name: Upload providers umd module to API
         run: |
