@@ -29,14 +29,13 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-
-      - name: Install terser-webpack-plugin
-        run: pnpm add terser-webpack-plugin -D
-        working-directory: providers
-
       - name: Install packages
         run: pnpm install --frozen-lockfile
         working-directory: providers
+
+      - name: Install terser-webpack-plugin
+        run: npm install --save-dev terser-webpack-plugin
+        working-directory: ${{ github.workspace }}
 
       - name: Build provider umd module
         run: webpack --config build-umd-module.js
