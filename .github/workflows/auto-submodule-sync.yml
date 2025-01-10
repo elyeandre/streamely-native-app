@@ -13,20 +13,27 @@ jobs:
         shell: bash
     steps:
     - name: Checkout repository and submodules
-      uses: actions/checkout@v2    
+      uses: actions/checkout@v4    
       with:
         persist-credentials: false
+        submodules: 'recursive'
 
     - name: Initialize and update submodules
       run: |
         git submodule update --init --recursive
         git submodule update --recursive --remote
 
+        
     - name: Debug Submodule Status
       run: |
-        cd providers
-        git status
-        
+        # Make sure the 'providers' directory exists
+        if [ -d "providers" ]; then
+          echo "providers directory exists"
+          cd providers
+          git status
+        else
+          echo "providers directory not found"
+        fi
       
     - name: Add and commit files
       run: |
