@@ -34,7 +34,7 @@ jobs:
 
       - name: Build provider library
         run: |
-          pnpm build
+          pnpm run build
         # Make sure the build runs inside the 'providers' submodule directory
         working-directory: providers
           
