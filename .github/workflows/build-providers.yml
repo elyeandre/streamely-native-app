@@ -1,9 +1,9 @@
 name: Build Providers 
 
 on:
+  workflow_dispatch: 
   repository_dispatch:
-    types:
-      - build-project 
+    types: [build-project]
 jobs:
   build:
     runs-on: ubuntu-latest
