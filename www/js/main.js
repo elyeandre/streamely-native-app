@@ -26,6 +26,10 @@ var tvHasSearched = false;
 var movieHasSearched = false;
 var movieNotFound = false;
 var tvNotFound = false;
+var requestIds = new Set();
+let listenerIntervalId = null;
+let isAborting = false;
+let trackName = '';
 
 // window.addEventListener('load', function () {
 //   // Initialize
@@ -91,545 +95,6 @@ const providersObject = providers
   .setFetcher(fetcher) // fetcher, every web request gets called through here
   .enableConsistentIpForRequests()
   .addBuiltinProviders()
-  .addSource({
-    id: 'moviesapi',
-    name: 'moviesapi',
-    rank: 750,
-    flags: [providers.flags.IP_LOCKED],
-    async scrapeMovie(ctx) {
-      function decryptJsScript(jsonStr, password) {
-        const decryptedText = CryptoJS.AES.decrypt(jsonStr, password, {
-          format: {
-            parse: (jsonStr) => {
-              const j = JSON.parse(jsonStr);
-              console.log(j);
-              const cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: CryptoJS.enc.Base64.parse(j.ct)
-              });
-              if (j.iv) cipherParams.iv = CryptoJS.enc.Hex.parse(j.iv);
-              if (j.s) cipherParams.salt = CryptoJS.enc.Hex.parse(j.s);
-              return cipherParams;
-            }
-          }
-        });
-        console.log(JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8)));
-        return JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8));
-      }
-      const baseUrl = 'https://moviesapi.club';
-      const decryptionKey = 'KB3c1lgTx6cHL3W';
-      const configRegex = /var\s+config\s*=\s*(\{[^]*?\});/;
-      const jsScriptRegex = /JScripts\s*=\s*(['"])(.*?)\1/;
-
-      const searchResults = await ctx.proxiedFetcher(`/movie/${ctx.media.tmdbId}`, {
-        baseUrl: baseUrl,
-        headers: {
-          Referer: baseUrl,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-        }
-      });
-      console.log(searchResults);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(searchResults, 'text/html');
-      const titleTag = doc.querySelector('title').textContent;
-      if (titleTag.includes('404')) throw new providers.NotFoundError('no search results match');
-
-      const embedUrl = doc.querySelector('.vidframe').getAttribute('src');
-
-      const embedPage = await ctx.proxiedFetcher(embedUrl, {
-        headers: {
-          Referer: baseUrl,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-        }
-      });
-      console.log(embedPage);
-      const jsScript = embedPage.match(jsScriptRegex)[2];
-      if (!jsScript) throw new Error('jsScript not found');
-      const decryptedJsScript = decryptJsScript(jsScript, decryptionKey);
-      console.log(decryptedJsScript);
-      const jwConfig = decryptedJsScript.match(configRegex)[1];
-      const getConfig = new Function('return ' + jwConfig + ';');
-      const configObject = getConfig();
-
-      console.log(configObject);
-
-      const thumbnailSource = configObject.tracks.find((track) => track.kind === 'thumbnails');
-
-      let thumbnailTrack;
-      if (thumbnailSource) {
-        thumbnailTrack = {
-          type: 'vtt',
-          url: thumbnailSource.file
-        };
-      }
-
-      const captions = [];
-      configObject.tracks.forEach((track) => {
-        if (track.kind !== 'captions') return;
-        const type = getCaptionTypeFromUrl(track.file);
-        if (!type) return;
-        const language = labelToLanguageCode(track.label.split(' ')[0]);
-        if (!language) return;
-        captions.push({
-          id: track.file,
-          language,
-          hasCorsRestrictions: true,
-          type,
-          url: track.file
-        });
-      });
-      console.log(captions);
-
-      return {
-        embeds: [],
-        stream: [
-          {
-            id: 'primary',
-            type: 'hls',
-            playlist: configObject.sources[0]?.file,
-            poster: configObject?.image,
-            flags: [providers.flags.IP_LOCKED],
-            captions: captions,
-            headers: {
-              Referer: baseUrl,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-            },
-            thumbnailTrack: thumbnailSource
-          }
-        ]
-      };
-    },
-    async scrapeShow(ctx) {
-      function decryptJsScript(jsonStr, password) {
-        const decryptedText = CryptoJS.AES.decrypt(jsonStr, password, {
-          format: {
-            parse: (jsonStr) => {
-              const j = JSON.parse(jsonStr);
-              console.log(j);
-              const cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: CryptoJS.enc.Base64.parse(j.ct)
-              });
-              if (j.iv) cipherParams.iv = CryptoJS.enc.Hex.parse(j.iv);
-              if (j.s) cipherParams.salt = CryptoJS.enc.Hex.parse(j.s);
-              return cipherParams;
-            }
-          }
-        });
-        console.log(JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8)));
-        return JSON.parse(decryptedText.toString(CryptoJS.enc.Utf8));
-      }
-      const baseUrl = 'https://moviesapi.club';
-      const decryptionKey = 'KB3c1lgTx6cHL3W';
-      const configRegex = /var\s+config\s*=\s*(\{[^]*?\});/;
-      const jsScriptRegex = /JScripts\s*=\s*(['"])(.*?)\1/;
-
-      const searchResults = await ctx.proxiedFetcher(
-        `/tv/${ctx.media.tmdbId}-${ctx.media.season.number}-${ctx.media.episode.number}`,
-        {
-          baseUrl: baseUrl,
-          headers: {
-            Referer: baseUrl,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-          }
-        }
-      );
-      console.log(searchResults);
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(searchResults, 'text/html');
-      const titleTag = doc.querySelector('title').textContent;
-      if (titleTag.includes('404')) throw new providers.NotFoundError('no search results match');
-
-      const embedUrl = doc.querySelector('.vidframe').getAttribute('src');
-
-      const embedPage = await ctx.proxiedFetcher(embedUrl, {
-        headers: {
-          Referer: baseUrl,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-        }
-      });
-      console.log(embedPage);
-      const jsScript = embedPage.match(jsScriptRegex)[2];
-      if (!jsScript) throw new Error('jsScript not found');
-      const decryptedJsScript = decryptJsScript(jsScript, decryptionKey);
-      console.log(decryptedJsScript);
-      const jwConfig = decryptedJsScript.match(configRegex)[1];
-      const getConfig = new Function('return ' + jwConfig + ';');
-      const configObject = getConfig();
-
-      console.log(configObject);
-
-      const thumbnailSource = configObject.tracks.find((track) => track.kind === 'thumbnails');
-
-      let thumbnailTrack;
-      if (thumbnailSource) {
-        thumbnailTrack = {
-          type: 'vtt',
-          url: thumbnailSource.file
-        };
-      }
-
-      const captions = [];
-      configObject.tracks.forEach((track) => {
-        if (track.kind !== 'captions') return;
-        const type = getCaptionTypeFromUrl(track.file);
-        if (!type) return;
-        const language = labelToLanguageCode(track.label.split(' ')[0]);
-        if (!language) return;
-        captions.push({
-          id: track.file,
-          language,
-          hasCorsRestrictions: true,
-          type,
-          url: track.file
-        });
-      });
-      console.log(captions);
-
-      return {
-        embeds: [],
-        stream: [
-          {
-            id: 'primary',
-            type: 'hls',
-            playlist: configObject.sources[0]?.file,
-            poster: configObject?.image,
-            flags: [providers.flags.IP_LOCKED],
-            captions: captions,
-            headers: {
-              Referer: baseUrl,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0'
-            },
-            thumbnailTrack: thumbnailSource
-          }
-        ]
-      };
-    }
-  })
-  .addSource({
-    // add your own source
-    id: '1flix',
-    name: '1flix',
-    rank: 800,
-    flags: [providers.flags.CORS_ALLOWED],
-    async scrapeMovie(ctx) {
-      const baseUrl = 'https://1flix.to';
-
-      const searchResults = await ctx.proxiedFetcher(
-        `/search/${ctx.media.title.replace(/\W-/g, '').replace(/['"]+/g, '').split(' ').join('-').toLowerCase()}`,
-        {
-          baseUrl: baseUrl
-        }
-      );
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(searchResults, 'text/html');
-      const items = Array.from(doc.querySelectorAll('.film_list-wrap > div.flw-item'));
-
-      const result = items.map((el) => {
-        const idElement = el.querySelector('div.film-poster > a');
-        const titleElement = el.querySelector('div.film-detail > h2 > a');
-        const yearElement = el.querySelector('div.film-detail > div.fd-infor > span:nth-child(1)');
-
-        const id = idElement ? idElement.getAttribute('href').split('/').pop().match(/\d+$/)[0] : null;
-        const title = titleElement ? titleElement.getAttribute('title') : null;
-        const yearText = yearElement ? yearElement.textContent : null;
-        const year = yearText ? parseInt(yearText, 10) : null;
-
-        // Ensuring required attributes are present
-        if (!id || !title || !year) {
-          return null;
-        }
-
-        return {
-          id,
-          title,
-          year
-        };
-      });
-      const matchingItem = result.find((v) => {
-        if (!v) return false;
-        return compareMedia(ctx.media, v.title, v.year);
-      });
-      const id = matchingItem?.id;
-      if (!id) throw new providers.NotFoundError('no search results match');
-
-      const jsonData = await ctx.proxiedFetcher(`/ajax/episode/list/${id}`, {
-        baseUrl: baseUrl
-      });
-      const doc2 = parser.parseFromString(jsonData, 'text/html');
-
-      // Get all anchor elements within `.nav-item`
-      const navItems = Array.from(doc2.querySelectorAll('.nav-item > a'));
-
-      const sourceLinks = navItems.map((el) => {
-        const embedTitle = el.getAttribute('title');
-        const linkId = el.getAttribute('data-linkid');
-
-        // Check if required attributes are present
-        if (!embedTitle || !linkId) {
-          throw new Error('Invalid sources');
-        }
-
-        // Return the required information as an object
-        return {
-          embed: embedTitle,
-          episodeId: linkId
-        };
-      });
-
-      console.log(sourceLinks);
-
-      async function getSourceDetails(sourceId) {
-        const jsonData = await ctx.proxiedFetcher(`/ajax/episode/sources/${sourceId}`, {
-          baseUrl: baseUrl
-        });
-
-        console.log(jsonData);
-        return jsonData?.link ?? null;
-      }
-
-      // Array to collect promises for all fetch operations
-      const embedPromises = sourceLinks.map(async (source) => {
-        let embedId;
-        switch (source.embed.toLowerCase()) {
-          case 'upcloud':
-            embedId = 'megaupcloud';
-            break;
-          case 'megacloud':
-            embedId = 'megacloud';
-            break;
-        }
-
-        const url = await getSourceDetails(source.episodeId); // Fetch the URL for the given source
-        return {
-          embedId,
-          url
-        };
-      });
-
-      // Wait for all promises to resolve before returning the result
-      const embeds = (await Promise.all(embedPromises)).filter((embed) => embed.url); // Filter out any empty links
-
-      return {
-        embeds
-      };
-    },
-    async scrapeShow(ctx) {
-      const baseUrl = 'https://1flix.to';
-      const searchResults = await ctx.proxiedFetcher(
-        `/search/${ctx.media.title.replace(/\W-/g, '').replace(/['"]+/g, '').split(' ').join('-').toLowerCase()}`,
-        {
-          baseUrl: baseUrl
-        }
-      );
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(searchResults, 'text/html');
-      const items = Array.from(doc.querySelectorAll('.film_list-wrap > div.flw-item'));
-
-      const result = items
-        .map((el) => {
-          const idElement = el.querySelector('div.film-poster > a');
-          const titleElement = el.querySelector('div.film-detail > h2 > a');
-          const seasonElement = el.querySelector('div.film-detail > div.fd-infor > span:nth-child(1)');
-
-          const id = idElement ? idElement.getAttribute('href').split('/').pop().match(/\d+$/)[0] : null;
-          const title = titleElement ? titleElement.getAttribute('title') : null;
-          const seasons = seasonElement ? seasonElement.textContent : null;
-          const numberOfSeasons = seasons && seasons.includes('SS') ? seasons.split('SS')[1].trim() : null;
-
-          // Ensuring required attributes are present
-          if (!id || !title || !numberOfSeasons) {
-            return null;
-          }
-
-          return {
-            id,
-            title,
-            numberOfSeasons
-          };
-        })
-        .filter(Boolean);
-      console.log(result);
-      const matchingItem = result.find((v) => {
-        if (!v) return false;
-        return compareTitle(ctx.media.title, v.title) && areShowsSimilar(ctx.media, v);
-      });
-      console.log(matchingItem);
-      const id = matchingItem?.id;
-      if (!id) throw new providers.NotFoundError('no search results match');
-
-      const jsonData = await ctx.proxiedFetcher(`/ajax/season/list/${id}`, {
-        baseUrl: baseUrl
-      });
-      const doc2 = parser.parseFromString(jsonData, 'text/html');
-
-      const seasonItems = doc2.querySelectorAll('.dropdown-menu.dropdown-menu-new a.ss-item');
-      console.log(seasonItems);
-      const matchingSeason = Array.from(seasonItems).find(
-        (item) => item.textContent.trim() === `Season ${ctx.media.season.number}`
-      );
-      const seasonId = matchingSeason
-        ? matchingSeason.getAttribute('data-id')
-        : seasonItems[ctx.media.season.number - 1].getAttribute('data-id');
-      console.log(seasonId);
-
-      const episodeData = await ctx.proxiedFetcher(`/ajax/season/episodes/${seasonId}`, {
-        baseUrl: baseUrl
-      });
-      const doc3 = parser.parseFromString(episodeData, 'text/html');
-
-      // Get all episode items
-      const episodeItems = doc3.querySelectorAll('.nav-item .eps-item');
-
-      const matchingEpisode = Array.from(episodeItems).find((item) =>
-        item.textContent.trim().includes(`Eps ${ctx.media.episode.number}:`)
-      );
-
-      // Return the `data-id` if found, otherwise return null
-      const episodeId = matchingEpisode ? matchingEpisode.getAttribute('data-id') : null;
-
-      const serverData = await ctx.proxiedFetcher(`/ajax/episode/servers/${episodeId}`, {
-        baseUrl: baseUrl
-      });
-      const doc4 = parser.parseFromString(serverData, 'text/html');
-
-      // Get all anchor elements within `.nav-item`
-      const navItems = Array.from(doc4.querySelectorAll('.nav-item > a'));
-
-      // Extract `data-id` and server name from each link
-      const servers = Array.from(navItems).map((link) => {
-        const id = link.getAttribute('data-id'); // Get `data-id`
-        const embedTitle = link.querySelector('span').textContent.trim(); // Get the server name from `span`
-
-        return {
-          embed: embedTitle,
-          dataid: id
-        };
-      });
-      async function getSourceDetails(sourceId) {
-        const jsonData = await ctx.proxiedFetcher(`/ajax/episode/sources/${sourceId}`, {
-          baseUrl: baseUrl
-        });
-
-        console.log(jsonData);
-        return jsonData?.link ?? null;
-      }
-
-      // Array to collect promises for all fetch operations
-      const embedPromises = servers.map(async (source) => {
-        let embedId;
-        switch (source.embed.toLowerCase()) {
-          case 'upcloud':
-            embedId = 'megaupcloud';
-            break;
-          case 'megacloud':
-            embedId = 'megacloud';
-            break;
-        }
-
-        const url = await getSourceDetails(source.dataid); // Fetch the URL for the given source
-        return {
-          embedId,
-          url
-        };
-      });
-
-      // Wait for all promises to resolve before returning the result
-      const embeds = (await Promise.all(embedPromises)).filter((embed) => embed.url); // Filter out any empty links
-
-      return {
-        embeds
-      };
-    }
-  })
-  .addEmbed({
-    // add your own source
-    id: 'megacloud',
-    name: 'megacloud',
-    rank: 93,
-    async scrape(ctx) {
-      const parsedUrl = new URL(ctx.url);
-      const dataPath = parsedUrl.pathname.split('/');
-      const decryptorApi = 'https://ely-mega-extractor.vercel.app';
-      const dataId = dataPath[dataPath.length - 1];
-      const streamRes = await ctx.fetcher(`${decryptorApi}/?id=${dataId}`);
-      console.log(streamRes);
-      const captions = [];
-      streamRes.tracks.forEach((track) => {
-        if (track.kind !== 'captions') return;
-        const type = getCaptionTypeFromUrl(track.file);
-        if (!type) return;
-        const language = labelToLanguageCode(track.label.split(' ')[0]);
-        if (!language) return;
-        captions.push({
-          id: track.file,
-          language,
-          hasCorsRestrictions: false,
-          type,
-          url: track.file
-        });
-      });
-      return {
-        stream: [
-          {
-            id: 'primary',
-            type: 'hls',
-            playlist: streamRes.sources[0]?.file,
-            flags: [providers.flags.IP_LOCKED],
-            captions,
-            preferredHeaders: {
-              Referer: parsedUrl.origin,
-              Origin: parsedUrl.origin
-            }
-          }
-        ]
-      };
-    }
-  })
-  .addEmbed({
-    // add your own source
-    id: 'megaupcloud',
-    name: 'megaupcloud',
-    rank: 48,
-    async scrape(ctx) {
-      const parsedUrl = new URL(ctx.url);
-      const dataPath = parsedUrl.pathname.split('/');
-      const decryptorApi = 'https://ely-mega-extractor.vercel.app';
-      const dataId = dataPath[dataPath.length - 1];
-      const streamRes = await ctx.fetcher(`${decryptorApi}/?id=${dataId}`);
-      console.log(streamRes);
-      const captions = [];
-      streamRes.tracks.forEach((track) => {
-        if (track.kind !== 'captions') return;
-        const type = getCaptionTypeFromUrl(track.file);
-        if (!type) return;
-        const language = labelToLanguageCode(track.label.split(' ')[0]);
-        if (!language) return;
-        captions.push({
-          id: track.file,
-          language,
-          hasCorsRestrictions: false,
-          type,
-          url: track.file
-        });
-      });
-      return {
-        stream: [
-          {
-            id: 'primary',
-            type: 'hls',
-            playlist: streamRes.sources[0]?.file,
-            flags: [providers.flags.CORS_ALLOWED],
-            captions,
-            preferredHeaders: {
-              Referer: parsedUrl.origin,
-              Origin: parsedUrl.origin
-            }
-          }
-        ]
-      };
-    }
-  })
   .build();
 
 if (isCordovaApp) {
@@ -640,6 +105,17 @@ if (isCordovaApp) {
 
 function init() {
   cordova.plugins.backgroundMode.enable();
+  window.plugins.toast.show(
+    'Created by Jerickson Mayor', // Message
+    'long', // Duration: 'short' or 'long'
+    'bottom', // Position: 'top', 'center', or 'bottom'
+    function (success) {
+      console.log('Toast displayed: ' + success);
+    },
+    function (error) {
+      console.error('Toast error: ' + error);
+    }
+  );
   // cordova.plugins.backgroundMode.overrideBackButton();
   // Turn screen on
   // cordova.plugins.backgroundMode.wakeUp();
@@ -1130,6 +606,7 @@ async function makeTMDBRequest(url, params = {}) {
     throw error; // Re-throw the error to handle it in the calling code
   }
 }
+
 async function isAvailable(searchString, type) {
   try {
     const response = await makeTMDBRequest(`${tmdbEndpoint}/search/${type}`, {
@@ -1204,8 +681,26 @@ function isAndroidWithChromium() {
   return isAndroid && isChromium;
 }
 
+function adjustTabIndicatorHeight(numberOfSources, offset = 100) {
+  const tabIndicator = document.getElementById('navigation_menu');
+  const navigationTabs = document.getElementById('navigation_tabs');
+
+  // reset the height to avoid accumulation
+  navigationTabs.style.height = '300px';
+
+  if (numberOfSources > 0) {
+    const tabHeight = navigationTabs.clientHeight / numberOfSources - offset;
+
+    navigationTabs.style.height = `${tabHeight * numberOfSources}px`;
+  }
+}
+
 function showScrapingScreen(sourcesIds, events) {
+  if (sourcesIds.length < 1) {
+    return;
+  }
   // Code to show scraping screen
+
   const navigationTabs = document.getElementById('navigation_tabs');
 
   navigationTabs.innerHTML = '';
@@ -1232,6 +727,7 @@ function showScrapingScreen(sourcesIds, events) {
   if (scrapingScreen) {
     scrapingScreen.style.display = 'flex';
   }
+  adjustTabIndicatorHeight(sourcesIds.length);
 }
 function hideScrapingScreen() {
   const scrapingScreen = document.getElementById('navigation_menu');
@@ -1358,6 +854,33 @@ const events = {
   }
 };
 
+async function fetchOpenSubAsBase64(tmdbid, lang, season, episode) {
+  try {
+    const queryParams = new URLSearchParams({
+      tmdbid: tmdbid,
+      lang: lang,
+      ...(season && { season: season }),
+      ...(episode && { episode: episode })
+    }).toString();
+
+    const apiUrl = `https://sub-api-two.vercel.app/api/v2/sub/search?${queryParams}`;
+
+    const fetcher = makeCordovaFetcher();
+    const response = await fetcher(apiUrl, {
+      method: 'GET'
+    });
+
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to fetch subtitle content! Status: ${response.statusCode}`);
+    }
+    const subtitle = await response.body;
+    return subtitle && subtitle.file ? subtitle.file.url : '';
+  } catch (error) {
+    console.error('Subtitles fetch error:', error);
+    return null;
+  }
+}
+
 async function fetchSubtitles(tmdbid, lang, season, episode) {
   try {
     // Set default values for lang and season
@@ -1392,11 +915,13 @@ function populateDropdown(sourceScrapers, formId) {
   // Clear existing options
   dropdown.innerHTML = '';
 
-  // Add default "runAll" option
-  const defaultOption = document.createElement('option');
-  defaultOption.value = 'runAll';
-  defaultOption.textContent = 'Run All';
-  dropdown.appendChild(defaultOption);
+  if (sourceScrapers.length > 1) {
+    // Add default "runAll" option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = 'runAll';
+    defaultOption.textContent = 'Run All';
+    dropdown.appendChild(defaultOption);
+  }
 
   // Add new options from sourceScrapers
   sourceScrapers.forEach((scraper) => {
@@ -1420,7 +945,8 @@ function populateDropdown(sourceScrapers, formId) {
 
   // If not present in localStorage, set default to "runAll"
   if (!storedSelectedSource) {
-    storedSelectedSource = 'runAll';
+    // storedSelectedSource = 'runAll';
+    storedSelectedSource = sourceScrapers.length > 1 ? 'runAll' : sourceScrapers[0].id;
     localStorage.setItem(`${formId}SelectedSource`, storedSelectedSource);
   }
 
@@ -1536,8 +1062,11 @@ function makeCordovaFetcher() {
       const serializedBody = serializeBody(ops.body);
       console.log('serializeBody', serializedBody.body);
       console.log('ops:', ops);
+      if (isAborting) {
+        return reject(new Error('Requests aborted'));
+      }
 
-      cordova.plugin.http.sendRequest(
+      let requestId = cordova.plugin.http.sendRequest(
         fullUrl,
         {
           method: ops.method,
@@ -1548,7 +1077,11 @@ function makeCordovaFetcher() {
           data: serializedBody.body
         },
         (res) => {
-          console.log('getHeaders:', getHeaders(ops.readHeaders, res));
+          if (isAborting) {
+            abortRequest(requestId);
+            return reject(new Error('Requests aborted'));
+          }
+          console.log('requestid:', requestId);
           console.log('Result:', res);
           const customizeResult = {
             body: res.headers['content-type'].includes('application/json') ? JSON.parse(res.data) : res.data,
@@ -1558,17 +1091,131 @@ function makeCordovaFetcher() {
           };
           console.log('customizeResult', customizeResult);
           console.log('getHeaders', customizeResult.headers?.get('date'));
+          // removeRequestId(requestId);
           resolve(customizeResult);
         },
         (err) => {
           console.error(err);
+          // removeRequestId(requestId);
           reject(err);
         }
       );
+      requestIds.add(requestId);
     });
   };
 
   return fetcher;
+}
+function removeRequestId(requestId) {
+  requestIds.delete(requestId);
+}
+
+const abortRequestWithDelay = (requestId) => {
+  return new Promise((resolve) => {
+    cordova.plugin.http.abort(
+      requestId,
+      (result) => {
+        console.log('Aborted requestId:', requestId, 'Result:', result.aborted);
+        removeRequestId(requestId);
+        // resolve(result);
+      },
+      (response) => {
+        console.error('Failed to abort requestId:', requestId, 'Error:', response.error);
+        removeRequestId(requestId);
+        // resolve(response);
+      }
+    );
+  });
+};
+
+// const startRequestIdListener = (delay = 150) => {
+//   if (listenerIntervalId !== null) {
+//     console.log('Listener is already running.');
+//     return;
+//   }
+
+//   isAborting = true;
+
+//   listenerIntervalId = setInterval(async () => {
+//     if (requestIds.size > 0) {
+//       for (const requestId of requestIds) {
+//         await abortRequestWithDelay(requestId);
+//         // Adding delay between each abort
+//         await new Promise((resolve) => setTimeout(resolve, delay));
+//       }
+//     }
+//   }, delay);
+
+//   console.log('Listener started.');
+// };
+
+const stopRequestIdListener = () => {
+  if (listenerIntervalId !== null) {
+    clearInterval(listenerIntervalId);
+    listenerIntervalId = null;
+    console.log('Listener stopped.');
+  } else {
+    console.log('No listener is running.');
+  }
+  isAborting = false;
+};
+function abortRequest(requestId) {
+  cordova.plugin.http.abort(
+    requestId,
+    (result) => {
+      console.log('Aborted requestId:', requestId, 'Result:', result.aborted);
+      requestIds.delete(requestId);
+    },
+    (response) => {
+      console.error('Failed to abort requestId:', requestId, 'Error:', response.error);
+      requestIds.delete(requestId);
+    }
+  );
+}
+
+const startRequestIdListener = (delay = 150) => {
+  if (listenerIntervalId !== null) {
+    console.log('Listener is already running.');
+    return;
+  }
+
+  isAborting = true;
+
+  listenerIntervalId = setInterval(() => {
+    if (requestIds.size > 0) {
+      for (const requestId of requestIds) {
+        abortRequest(requestId);
+      }
+    }
+  }, delay);
+
+  console.log('Listener started.');
+};
+
+//// Function to abort a specific request
+// function abortRequest(requestId) {
+//   cordova.plugin.http.abort(
+//     requestId,
+//     function (result) {
+//       console.log('Aborted requestId:', requestId, 'Result:', result.aborted);
+//       removeRequestId(requestId);
+//     },
+//     function (response) {
+//       console.error('Failed to abort requestId:', requestId, 'Error:', response.error);
+//       removeRequestId(requestId);
+//     }
+//   );
+// }
+
+// Function to abort all requests
+function abortAllRequests() {
+  if (requestIds.size > 0) {
+    requestIds.forEach((requestId) => {
+      abortRequest(requestId);
+    });
+  } else {
+    console.log('No requests to abort.');
+  }
 }
 
 const headerMap = {
@@ -1632,6 +1279,8 @@ async function runProviders(media) {
   console.log('List of sourceScrapers: ', sourceScrapers);
   console.log('List of embedScrapers: ', embedScrapers);
 
+  resetTrackName();
+
   try {
     let response = null;
 
@@ -1643,6 +1292,11 @@ async function runProviders(media) {
     }
 
     console.log(response);
+
+    if (isAborting) {
+      showModal('exclamation', 'Error', 'Request Aborted');
+      return;
+    }
 
     if (!response || (!response.stream && response.embeds.length === 0 && response.stream.length === 0)) {
       showModal('exclamation', 'Oops! Scraping Error', "Sorry, we couldn't retrieve any media.");
@@ -1704,8 +1358,16 @@ async function runProviders(media) {
 
       mergedURL = englishCaption.url;
 
+      // sub1 = await fetchSubtitleAsBase64(mergedURL, response.stream?.headers);
+
       console.log(`English caption found (${englishCaption.language}, ${englishCaption.type}):`, mergedURL);
-      sub1 = await uploadSubtitle(mergedURL, englishCaption.type, media, englishCaption.language);
+      sub1 = await uploadSubtitle(
+        mergedURL,
+        englishCaption.type,
+        media,
+        englishCaption.language,
+        response.stream?.headers
+      );
     } else {
       console.log('No English Caption found.');
     }
@@ -1720,6 +1382,7 @@ async function runProviders(media) {
         : '';
 
     let mergedSubtitles = [sub1, sub2].map((url) => url.replace(/:/g, '\\:')).join(':');
+    // let mergedSubtitles = [sub1, sub2].join(':');
 
     let preferredHeaders = response.stream?.preferredHeaders;
     const headers = response.stream?.headers;
@@ -1727,7 +1390,7 @@ async function runProviders(media) {
     let defaultUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0';
 
     // let sourceId = response?.sourceId || selectedSource;
-    let defaultAcceptLanguage = `en-US,en;q=0.5`;
+    let defaultAcceptLanguage = 'en-US,en;q=0.5';
 
     let title = media.title;
 
@@ -1743,9 +1406,11 @@ async function runProviders(media) {
     let extras = [];
 
     if (preferredHeaders || headers) {
+      const combinedHeaders = { ...headers, ...preferredHeaders };
+
       let userAgentValue;
       let acceptLanguageValue;
-      let headerFields = Object.entries(preferredHeaders || headers)
+      let headerFields = Object.entries(combinedHeaders)
         .map(([key, value]) => {
           if (key.toLocaleLowerCase() === 'user-agent') {
             userAgentValue = value;
@@ -1753,7 +1418,7 @@ async function runProviders(media) {
           }
           if (key.toLocaleLowerCase() === 'accept-language') {
             acceptLanguageValue = value;
-            return `Accept-Language: ${acceptLanguageValue}`;
+            return `Accept-Language: ${acceptLanguageValue.replace(/,/g, `\\\,`)}`;
           }
           return `${key}: ${value}`;
         })
@@ -1765,12 +1430,16 @@ async function runProviders(media) {
       }
 
       if (!acceptLanguageValue) {
-        headerFields += `,Accept-Language: ${defaultAcceptLanguage}`;
+        headerFields += `,Accept-Language: ${defaultAcceptLanguage.replace(/,/g, `\\\,`)}`;
       }
       headerFields = headerFields.replace(/,(?=,)/g, '');
 
-      extras.push({ name: '--user-agent', value: userAgentValue.replace(/,/g, `\\\,`), dataType: 'String' });
-      extras.push({ name: '--http-header-fields', value: headerFields.replace(/,/g, `\\\,`), dataType: 'String' });
+      console.log('FINALHEADER:', headerFields);
+
+      // extras.push({ name: '--user-agent', value: userAgentValue.replace(/,/g, `\\\,`), dataType: 'String' });
+      extras.push({ name: '--user-agent', value: userAgentValue, dataType: 'String' });
+      // extras.push({ name: '--http-header-fields', value: headerFields.replace(/,/g, `\\\,`), dataType: 'String' });
+      extras.push({ name: '--http-header-fields', value: headerFields, dataType: 'String' });
     } else {
       // Both headers and preferredHeaders are falsy, set default values
       extras.push({ name: '--user-agent', value: defaultUserAgent, dataType: 'String' });
@@ -1795,13 +1464,13 @@ async function runProviders(media) {
     }
 
     extras.push({ name: '--force-seekable', value: 'yes', dataType: 'String' });
+    extras.push({ name: '_useIntentFile', value: true, dataType: 'Boolean' });
     extras.push({ name: '--tls-verify', value: 'no', dataType: 'String' });
     extras.push({ name: '--vo', value: 'gpu', dataType: 'String' });
     extras.push({ name: '--gpu-context', value: 'android', dataType: 'String' });
     extras.push({ name: '--hwdec', value: 'mediacodec-copy', dataType: 'String' });
-    extras.push({ name: '--video-latency-hacks', value: 'yes', dataType: 'String' });
     extras.push({ name: '--cache', value: 'yes', dataType: 'String' });
-    extras.push({ name: '--stream-buffer-size', value: '1MiB', dataType: 'String' });
+    extras.push({ name: '--stream-buffer-size', value: '5MiB', dataType: 'String' });
     extras.push({ name: '--panscan', value: '1.0', dataType: 'String' });
     extras.push({ name: 'show_media_title', value: true, dataType: 'Boolean' });
 
@@ -1832,7 +1501,17 @@ async function runProviders(media) {
         }
       },
       errorCallback: function (err) {
-        console.log('There was an error launching MPV Player.', err);
+        if (err === 'Application not found for uri.') {
+          showModal(
+            'exclamation',
+            'Player Unavailable',
+            'MPV Player is not installed on your device. Please install it and try again.',
+            true, // You might want to make it cancelable based on your requirements
+            'Download'
+          );
+        } else {
+          console.log('There was an error launching MPV Player.', err);
+        }
       }
     });
 
@@ -1934,6 +1613,59 @@ function getErrorMessage(error) {
   }
 }
 
+function getSubtitleMimeType(subtitleUrl) {
+  const extension = subtitleUrl.split('.').pop().toLowerCase();
+
+  switch (extension) {
+    case 'vtt':
+      return 'text/vtt';
+    case 'srt':
+      return 'application/x-subrip';
+    default:
+      throw new Error(`Unsupported subtitle format: .${extension}`);
+  }
+}
+
+function stringToBase64(text) {
+  const byteArray = new TextEncoder().encode(text);
+  const base64String = btoa(String.fromCharCode(...byteArray));
+  return base64String;
+}
+
+function stringToHex(text) {
+  const byteArray = new TextEncoder().encode(text);
+  const hexString = Array.prototype.map
+    .call(byteArray, (byte) => {
+      return ('0' + byte.toString(16)).slice(-2);
+    })
+    .join('');
+  return hexString;
+}
+
+async function fetchSubtitleAsBase64(subtitleUrl, headers) {
+  const fetcher = makeCordovaFetcher();
+
+  try {
+    const subtitleResponse = await fetcher(subtitleUrl, {
+      method: 'GET',
+      headers: { ...headers }
+    });
+
+    if (subtitleResponse.statusCode !== 200) {
+      throw new Error(`Failed to fetch subtitle content! Status: ${subtitleResponse.statusCode}`);
+    }
+
+    const subtitleText = await subtitleResponse.body;
+
+    const base64Subtitle = stringToBase64(subtitleText);
+
+    return base64Subtitle;
+  } catch (error) {
+    console.error('Error:', error);
+    return '';
+  }
+}
+
 window.addEventListener('load', () => {
   const currentTab = activeTab();
   const inputElement = `${currentTab.toLowerCase()}Input`;
@@ -1941,18 +1673,23 @@ window.addEventListener('load', () => {
   toggleCancelButton(window[inputElement], window[cancelElement]);
 });
 
-async function uploadSubtitle(subtitleUrl, subtitleType, media, lang) {
+async function uploadSubtitle(subtitleUrl, subtitleType, media, lang, headers) {
+  const apiUrl = 'https://sub-api-two.vercel.app/api/v2/upload-sub';
+  const fetcher = makeCordovaFetcher();
+
   try {
-    const apiUrl = 'https://sub-api-two.vercel.app/api/v2/upload-sub';
-
     // Fetch the subtitle content
-    const subtitleResponse = await cordovaFetch(subtitleUrl);
+    const subtitleResponse = await fetcher(subtitleUrl, {
+      method: 'GET',
+      headers: { ...headers }
+    });
+    console.log(subtitleResponse);
 
-    if (!subtitleResponse.ok) {
-      throw new Error(`Failed to fetch subtitle content! Status: ${subtitleResponse.status}`);
+    if (subtitleResponse.statusCode !== 200) {
+      throw new Error(`Failed to fetch subtitle content! Status: ${subtitleResponse.statusCode}`);
     }
 
-    const subtitleBlob = await subtitleResponse.blob();
+    const subtitleBlob = new Blob([subtitleResponse.body]);
 
     let subtitleFileName;
 
@@ -1962,15 +1699,11 @@ async function uploadSubtitle(subtitleUrl, subtitleType, media, lang) {
       subtitleFileName = `${media.title}-S${media.season.number}E${media.episode.number}.${subtitleType}`;
     }
 
-    // Create a File object
-    const subtitleFile = new File([subtitleBlob], subtitleFileName, { type: subtitleBlob.type });
-
-    // Create a FormData and append the File
     const formData = new FormData();
-    formData.append('file', subtitleFile);
+    formData.append('file', subtitleBlob, subtitleFileName);
+    console.log('BLOB', subtitleBlob);
 
-    // Set up the fetch options
-    const options = {
+    const uploadOptions = {
       method: 'POST',
       body: formData,
       headers: {
@@ -1978,17 +1711,36 @@ async function uploadSubtitle(subtitleUrl, subtitleType, media, lang) {
       }
     };
 
-    const response = await fetch(apiUrl, options);
+    const uploadResponse = await fetcher(apiUrl, uploadOptions);
 
-    if (!response.ok) {
-      throw new Error(`Upload file error! Status: ${response.status}`);
+    if (uploadResponse.statusCode !== 200) {
+      throw new Error(`Upload file error! Status: ${uploadResponse.statusCode}`);
     }
 
-    const uploadedFile = await response.json();
+    const uploadedFile = uploadResponse.body;
 
-    return uploadedFile?.file?.url || '';
+    return uploadedFile?.file?.url ?? '';
   } catch (error) {
-    console.error('Upload file error:', error);
+    console.error('Error:', error);
+    return '';
+  }
+}
+
+async function getSubtitlesAsBase64(media) {
+  const defaultLanguage = 'en';
+  try {
+    let subtitle;
+    if (media.type === 'movie') {
+      subtitle = await fetchOpenSubAsBase64(media.tmdbId, defaultLanguage);
+    } else if (media.type === 'show') {
+      subtitle = await fetchOpenSubAsBase64(media.tmdbId, defaultLanguage, media.season.number, media.episode.number);
+    }
+
+    let subtitleText = await fetchSubtitleAsBase64(subtitle.replace('http://', 'https://'), null);
+
+    return subtitleText;
+  } catch (error) {
+    console.error('Error fetching subtitles:', error);
     return '';
   }
 }
@@ -2383,6 +2135,19 @@ document.getElementById('dismiss-popup-btn').addEventListener('click', function 
   if (buttonText === 'Dismiss') {
     hideModal();
     document.getElementsByClassName('popup')[0].classList.remove('active');
+  } else if (buttonText === 'Download') {
+    const downloadLink = 'https://r2-api.mayor.workers.dev/mpv.apk';
+
+    window.plugins.launcher.launch({
+      packageName: 'com.android.chrome', // Use Chrome's package name for Android
+      uri: downloadLink,
+      successCallback: function (json) {
+        console.log('Download started in Chrome');
+      },
+      errorCallback: function (err) {
+        console.log('Error launching download link.', err);
+      }
+    });
   }
 });
 
@@ -2429,14 +2194,31 @@ document.getElementById('back-btn').addEventListener('click', function () {
   document.getElementById('loadingModal').classList.remove('active');
   hideSpinner();
   // isBack = true;
-  cordovaFetch.cancelAllRequests();
+  // cordovaFetch.cancelAllRequests();
+  abortAllRequests();
 });
+
+function resetTrackName() {
+  trackName = ''; // Set trackName to an empty string or initial value
+}
+function addTrackName(newTrackName) {
+  if (newTrackName) {
+    // Trim whitespace and avoid duplicate track names
+    newTrackName = newTrackName.trim();
+    if (newTrackName && !trackName.split(', ').includes(newTrackName)) {
+      // If trackName is not empty, add a comma before appending the new track name
+      trackName = trackName ? `${trackName}, ${newTrackName}` : newTrackName;
+    }
+  }
+}
+
 async function runEmbedScraper(embed, media) {
   const dropdownId = `${media.type === 'movie' ? 'movie' : 'tv'}SourceSelect`;
   const dropdown = document.getElementById(dropdownId);
   const selectedSource = dropdown.value;
 
   showSpinner();
+  resetTrackName();
 
   try {
     const response = await providersObject.runEmbedScraper({ id: embed.embedId, url: embed.url });
@@ -2486,13 +2268,35 @@ async function runEmbedScraper(embed, media) {
 
       mergedURL = englishCaption.url;
 
-      console.log(`English caption found (${englishCaption.language}, ${englishCaption.type}):`, mergedURL);
-      sub1 = await uploadSubtitle(mergedURL, englishCaption.type, media, englishCaption.language);
+      const base64Subtitle = await fetchSubtitleAsBase64(mergedURL, response.stream?.headers);
+      if (base64Subtitle) {
+        const subMime = getSubtitleMimeType(mergedURL);
+        const dataScheme = `data://${subMime};base64,${base64Subtitle}`;
+        sub1 = dataScheme;
+        addTrackName('English (Default)');
+      }
+
+      // console.log(`English caption found (${englishCaption.language}, ${englishCaption.type}):`, mergedURL);
+      // sub1 = await uploadSubtitle(
+      //   mergedURL,
+      //   englishCaption.type,
+      //   media,
+      //   englishCaption.language,
+      //   response.stream?.headers
+      // );
     } else {
       console.log('No English Caption found.');
     }
 
-    let sub2 = await getSubtitles(media);
+    // let sub2 = await getSubtitles(media);
+    let sub2 = '';
+    let base64Subtitle2 = await getSubtitlesAsBase64(media);
+    if (base64Subtitle2) {
+      const subMime = 'application/x-subrip';
+      const dataScheme = `data://${subMime};base64,${base64Subtitle2}`;
+      sub2 = dataScheme;
+      addTrackName('English (OpenSubtitle)');
+    }
 
     let mediaUrl =
       response.stream?.type === 'hls'
@@ -2502,13 +2306,16 @@ async function runEmbedScraper(embed, media) {
         : '';
 
     let mergedSubtitles = [sub1, sub2].map((url) => url.replace(/:/g, '\\:')).join(':');
+    // const mergedSubtitles = [sub1, sub2].join(':');
 
     let preferredHeaders = response.stream?.preferredHeaders;
     let headers = response.stream?.headers;
 
-    let defaultUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0';
+    console.log('PreferredHeaders', preferredHeaders);
+    console.log('Headers', headers);
 
-    let defaultAcceptLanguage = `en-US,en;q=0.5`;
+    const defaultUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0';
+    const defaultAcceptLanguage = 'en-US,en;q=0.5';
 
     // let sourceId = response?.sourceId || selectedSource;
 
@@ -2532,9 +2339,12 @@ async function runEmbedScraper(embed, media) {
     let extras = [];
 
     if (preferredHeaders || headers) {
+      const combinedHeaders = { ...headers, ...preferredHeaders };
+
       let userAgentValue;
       let acceptLanguageValue;
-      let headerFields = Object.entries(preferredHeaders || headers)
+
+      let headerFields = Object.entries(combinedHeaders)
         .map(([key, value]) => {
           if (key.toLocaleLowerCase() === 'user-agent') {
             userAgentValue = value;
@@ -2542,7 +2352,7 @@ async function runEmbedScraper(embed, media) {
           }
           if (key.toLocaleLowerCase() === 'accept-language') {
             acceptLanguageValue = value;
-            return `Accept-Language: ${acceptLanguageValue}`;
+            return `Accept-Language: ${acceptLanguageValue.replace(/,/g, `\\\,`)}`;
           }
           return `${key}: ${value}`;
         })
@@ -2554,12 +2364,17 @@ async function runEmbedScraper(embed, media) {
       }
 
       if (!acceptLanguageValue) {
-        headerFields += `,Accept-Language: ${defaultAcceptLanguage}`;
+        headerFields += `,Accept-Language: ${defaultAcceptLanguage.replace(/,/g, `\\\,`)}`;
       }
+      // Remove extra commas
       headerFields = headerFields.replace(/,(?=,)/g, '');
 
-      extras.push({ name: '--user-agent', value: userAgentValue.replace(/,/g, `\\\,`), dataType: 'String' });
-      extras.push({ name: '--http-header-fields', value: headerFields.replace(/,/g, `\\\,`), dataType: 'String' });
+      console.log('FINALHEADERS:', headerFields);
+
+      // extras.push({ name: '--user-agent', value: userAgentValue.replace(/,/g, `\\\,`), dataType: 'String' });
+      extras.push({ name: '--user-agent', value: userAgentValue, dataType: 'String' });
+      // extras.push({ name: '--http-header-fields', value: headerFields.replace(/,/g, `\\\,`), dataType: 'String' });
+      extras.push({ name: '--http-header-fields', value: headerFields, dataType: 'String' });
     } else {
       // Both headers and preferredHeaders are falsy, set default values
       extras.push({ name: '--user-agent', value: defaultUserAgent, dataType: 'String' });
@@ -2577,18 +2392,19 @@ async function runEmbedScraper(embed, media) {
 
     if (sub1 && sub2) {
       // If both sub1 and sub2 are present, add a parameter representing multiple subtitle files
-      extras.push({ name: '--sub-files', value: mergedSubtitles, dataType: 'String' });
+      // extras.push({ name: '--sub-files', value: mergedSubtitles, dataType: 'String' });
     }
     if (title) {
       extras.push({ name: '--force-media-title', value: title, dataType: 'String' });
     }
 
     extras.push({ name: '--force-seekable', value: 'yes', dataType: 'String' });
+    extras.push({ name: '_useIntentFile', value: true, dataType: 'Boolean' });
     extras.push({ name: '--tls-verify', value: 'no', dataType: 'String' });
+    extras.push({ name: 'track-names', value: trackName, dataType: 'String' });
     extras.push({ name: '--vo', value: 'gpu', dataType: 'String' });
     extras.push({ name: '--gpu-context', value: 'android', dataType: 'String' });
     extras.push({ name: '--hwdec', value: 'mediacodec-copy', dataType: 'String' });
-    extras.push({ name: '--video-latency-hacks', value: 'yes', dataType: 'String' });
     extras.push({ name: '--cache', value: 'yes', dataType: 'String' });
     extras.push({ name: '--stream-buffer-size', value: '1MiB', dataType: 'String' });
     extras.push({ name: '--panscan', value: '1.0', dataType: 'String' });

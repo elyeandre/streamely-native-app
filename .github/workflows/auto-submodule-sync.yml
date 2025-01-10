@@ -1,0 +1,43 @@
+name: 'Submodules Sync'
+
+on:
+  workflow_dispatch: # on button click
+  schedule:
+    - cron: '*/5 * * * *' # every 30 minutes
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout repository and submodules
+      uses: actions/checkout@v2    
+      with:
+        persist-credentials: false
+
+    - name: Initialize and update submodules
+      run: |
+        git submodule update --init --recursive
+        git submodule update --recursive --remote
+
+    - name: Debug Submodule Status
+      run: |
+        cd providers
+        git status
+        
+      
+    - name: Add and commit files
+      run: |
+        git add --all
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit -m "Update submodules at $(date "+DATE: %Y-%m-%d TIME: %H:%M:%S")" 
+     
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.MY_PAT }}
+        branch: ${{ github.ref }}
+

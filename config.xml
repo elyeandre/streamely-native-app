@@ -10,7 +10,33 @@
     <allow-intent href="*" />
     <access origin="*" />
   <preference name="AndroidInsecureFileModeEnabled" value="true" />
+  <preference name="StatusBarBackgroundColor" value="#16191c" />
+  <preference name="StatusBarOverlaysWebView" value="true" />
   <preference name="AndroidBlacklistSecureSocketProtocols" value="SSLv3,TLSv1" />
+  <preference name="AndroidPersistentFileLocation" value="Compatibility" />
+<platform name="android">
+  <resource-file src="res/values/colors.xml" target="/app/src/main/res/values/colors.xml" />
+  <icon background="@color/background" density="ldpi" foreground="res/icon/android/ldpi-foreground.png" />
+  <icon background="@color/background" density="mdpi" foreground="res/icon/android/mdpi-foreground.png" />
+  <icon background="@color/background" density="hdpi" foreground="res/icon/android/hdpi-foreground.png" />
+  <icon background="@color/background" density="xhdpi" foreground="res/icon/android/xhdpi-foreground.png" />
+  <icon background="@color/background" density="xxhdpi" foreground="res/icon/android/xxhdpi-foreground.png" />
+  <icon background="@color/background" density="xxxhdpi" foreground="res/icon/android/xxxhdpi-foreground.png" />
+</platform>
+
+<platform name="android">
+  <resource-file src="res/values/colors.xml" target="/app/src/main/res/values/colors.xml" />
+    <!-- Default -->
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="res/screen/android/icon.png" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#16191c" />
+
+</platform>
+
+
+<feature name="Toast">
+  <param name="android-package" value="nl.xservices.plugins.Toast" />
+</feature>
+
 <feature name="Launcher">
 	<param name="android-package" value="com.hutchind.cordova.plugins.launcher.Launcher" />
 </feature>

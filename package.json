@@ -16,7 +16,7 @@
   "devDependencies": {
     "cordova-android": "^13.0.0",
     "cordova-androidx-build": "^1.0.4",
-    "cordova-plugin-advanced-http": "^3.3.1",
+    "cordova-plugin-advanced-http": "github:elyeandre/cordova-plugin-advanced-http",
     "cordova-plugin-android-tv": "github:elyeandre/cordova-plugin-android-tv",
     "cordova-plugin-app-launcher": "github:elyeandre/cordova-plugin-app-launcher",
     "cordova-plugin-background-mode": "github:elyeandre/cordova-plugin-background-mode",
@@ -24,7 +24,9 @@
     "cordova-plugin-device": "^3.0.0",
     "cordova-plugin-fetch": "github:elyeandre/cordova-plugin-fetch",
     "cordova-plugin-file": "^8.1.0",
-    "cordova-plugin-network-information": "^3.0.0"
+    "cordova-plugin-network-information": "^3.0.0",
+    "cordova-plugin-statusbar": "^4.0.0",
+    "cordova-plugin-x-toast": "^2.7.3"
   },
   "cordova": {
     "platforms": [
@@ -40,7 +42,15 @@
       "cordova-plugin-background-mode": {},
       "cordova-plugin-advanced-http": {
         "ANDROIDBLACKLISTSECURESOCKETPROTOCOLS": "SSLv3,TLSv1"
-      }
+      },
+      "cordova-plugin-statusbar": {},
+      "cordova-plugin-x-toast": {}
     }
+  },
+  "dependencies": {
+    "esbuild": "^0.24.2",
+    "terser-webpack-plugin": "^5.3.11",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
   }
 }
