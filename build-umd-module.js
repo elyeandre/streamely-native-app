@@ -3,7 +3,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
-  entry: './provider/lib/index.js', // Update with your entry file
+  entry: './providers/lib/index.js', // Update with your entry file
   output: {
     filename: 'provider.min.js',
     path: path.resolve(__dirname, 'dist'),
