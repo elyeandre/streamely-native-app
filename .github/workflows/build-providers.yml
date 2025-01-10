@@ -4,42 +4,55 @@ on:
   workflow_dispatch: 
   repository_dispatch:
     types: [build-project]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     environment: 
-     name: CI
+      name: CI
     permissions:
       contents: read
       deployments: write
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-           submodules: recursive
+          submodules: recursive
            
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20 
            
-      - name: Build provider library
+      - name: Install pnpm
         run: |
           npm i -g pnpm
+           
+      - name: Install dependencies
+        run: |
           pnpm install
+        working-directory: providers
+
+      - name: Install webpack-cli (if needed)
+        run: |
+          pnpm install -D webpack-cli
+        working-directory: providers
+
+      - name: Build provider library
+        run: |
+          pnpm build
         working-directory: providers
           
       - name: Build provider umd module
         run: npx webpack --config build-umd-module.js
+        working-directory: providers
 
       - name: Upload providers umd module to API
         run: |
           curl -X PUT \
                -H "X-Custom-Auth-Key: $MY_KEY" \
                --data-binary @provider.min.js \
-               https://r2-api.mayor.workers.dev/providers.min.js
+               https://r2-api.mayor.workers.dev/provider.min.js
         working-directory: dist
         env:
           MY_KEY: ${{ secrets.MY_KEY }}
-               
