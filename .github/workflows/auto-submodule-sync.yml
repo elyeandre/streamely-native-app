@@ -3,8 +3,7 @@ name: 'Submodules Sync'
 on:
   workflow_dispatch: # on button click
   schedule:
-    - cron: '*/5 * * * *' # every 30 minutes
-
+     - cron: '0 * * * *' # Every 1 hour
 jobs:
   sync:
     runs-on: ubuntu-latest
