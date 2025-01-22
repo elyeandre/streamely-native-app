@@ -7,7 +7,7 @@ jobs:
     steps:
         
       - name: Trigger Build and Publish Workflow
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.MY_PAT }}
           repository: elyeandre/streamely-native-app
