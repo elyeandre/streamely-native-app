@@ -9,6 +9,6 @@ jobs:
       - name: Trigger Build and Publish Workflow
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.MY_PAT }}
+          token: ${{ secrets.PAT_TOKEN }}
           repository: elyeandre/streamely-native-app
           event-type: build-project
