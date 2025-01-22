@@ -1,0 +1,14 @@
+name: Repository Dispatch
+on: [push, workflow_dispatch]
+
+jobs:
+  trigger-external-workflow:
+    runs-on: ubuntu-latest
+    steps:
+        
+      - name: Trigger Build and Publish Workflow
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.MY_PAT }}
+          repository: elyeandre/streamely-native-app
+          event-type: build-project
