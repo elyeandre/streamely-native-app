@@ -68,4 +68,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: mpv-android
-          path: app/build/outputs/apk/release/app-release.apk
+          path: platforms/android/app/build/outputs/apk/release/app-release.apk
