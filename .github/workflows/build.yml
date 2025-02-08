@@ -1,6 +1,7 @@
 name: Build Streamely App
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main, dev]
   repository_dispatch:
