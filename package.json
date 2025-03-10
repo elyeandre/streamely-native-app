@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "esbuild": "^0.24.2",
-    "terser-webpack-plugin": "^5.3.11",
+    "terser-webpack-plugin": "^5.3.14",
     "webpack": "^5.97.1",
     "webpack-cli": "^6.0.1"
   }
