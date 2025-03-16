@@ -1,3 +1,4 @@
 [submodule "providers"]
 	path = providers
-	url = https://github.com/sussy-code/providers
+	url = https://github.com/Pasithea0/smov-providers
+	branch = beta
