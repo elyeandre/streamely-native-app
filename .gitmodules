@@ -1,0 +1,4 @@
+[submodule "smov-providers"]
+	path = smov-providers
+	url = https://github.com/Pasithea0/smov-providers.git
+	branch = beta
