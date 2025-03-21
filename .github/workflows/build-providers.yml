@@ -31,7 +31,7 @@ jobs:
 
       - name: Install packages
         run: pnpm install --frozen-lockfile
-        working-directory: providers
+        working-directory: smov-providers
 
       - name: Install terser-webpack-plugin
         run: npm install --save-dev terser-webpack-plugin
