@@ -1,4 +1,4 @@
 [submodule "providers"]
-	path = providers
+	path = smov-providers
 	url = https://github.com/Pasithea0/smov-providers
 	branch = beta
