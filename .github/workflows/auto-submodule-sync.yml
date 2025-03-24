@@ -22,6 +22,7 @@ jobs:
         git submodule deinit -f -- smov-providers
         rm -rf .git/modules/smov-providers
         git submodule update --init --recursive
+        git submodule update --remote --merge
         #git submodule update --init --recursive
         #git config -f .gitmodules submodule.smov-providers.branch beta
         #git submodule update --remote --merge
