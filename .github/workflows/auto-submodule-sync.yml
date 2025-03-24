@@ -19,9 +19,11 @@ jobs:
 
     - name: Initialize and update submodules
       run: |
-        #git submodule update --init --recursive
+        git submodule update --init --recursive
+        git config -f .gitmodules submodule.smov-providers.branch beta
         git submodule update --remote --merge
-        git submodule update --recursive --remote
+        #git submodule update --remote --merge
+        #git submodule update --recursive --remote
 
         
     - name: Debug Submodule Status
