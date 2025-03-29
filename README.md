@@ -8,7 +8,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/elyeandre/streamely-native-app?utm_source=oss&utm_medium=github&utm_campaign=elyeandre%2Fstreamely-native-app&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 <h4 align="left"> Streamely is streaming app built on top of <a href="https://cordova.apache.org/" target="_blank">Cordova</a>.</h4>
 
