@@ -1,5 +1,10 @@
 name: Repository Dispatch
-on: [push, workflow_dispatch]
+#on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - update  # Replace with your desired branch
+  workflow_dispatch:
 
 jobs:
   trigger-external-workflow:
