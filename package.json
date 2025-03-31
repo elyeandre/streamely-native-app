@@ -14,7 +14,7 @@
   "author": "Jerickson Mayor",
   "license": "Apache-2.0",
   "devDependencies": {
-    "cordova-android": "^13.0.0",
+    "cordova-android": "^14.0.0",
     "cordova-androidx-build": "^1.0.4",
     "cordova-plugin-advanced-http": "github:elyeandre/cordova-plugin-advanced-http",
     "cordova-plugin-android-tv": "github:elyeandre/cordova-plugin-android-tv",
