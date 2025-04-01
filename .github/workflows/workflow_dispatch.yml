@@ -16,4 +16,4 @@ jobs:
         with:
           token: ${{ secrets.PAT_TOKEN }}
           repository: elyeandre/streamely-native-app
-          event-type: build-project
+          event-type: build-providers
