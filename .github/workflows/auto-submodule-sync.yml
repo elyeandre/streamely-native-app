@@ -22,6 +22,13 @@ jobs:
         git submodule deinit -f -- smov-providers
         rm -rf .git/modules/smov-providers
         git submodule update --init --recursive
+
+        # Set identity before attempting to merge inside the submodule
+        cd smov-providers
+        git config user.email "action@github.com"
+        git config user.name "GitHub Action"
+        cd ..
+        
         git submodule update --remote --merge
         #git submodule update --init --recursive
         #git config -f .gitmodules submodule.smov-providers.branch beta
@@ -40,13 +47,6 @@ jobs:
         else
           echo "providers directory not found"
         fi
-
-    - name: Set Git identity in submodule
-      run: |
-        cd smov-providers
-        git config user.email "action@github.com"
-        git config user.name "GitHub Action"
-
       
     - name: Add and commit files
       run: |
