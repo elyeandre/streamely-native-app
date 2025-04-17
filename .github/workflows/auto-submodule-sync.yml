@@ -27,9 +27,11 @@ jobs:
         cd smov-providers
         git config user.email "action@github.com"
         git config user.name "GitHub Action"
+        git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
         cd ..
         
         git submodule update --remote --merge
+        
         #git submodule update --init --recursive
         #git config -f .gitmodules submodule.smov-providers.branch beta
         #git submodule update --remote --merge
