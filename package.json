@@ -23,7 +23,7 @@
     "cordova-plugin-cleartext": "^1.0.0",
     "cordova-plugin-device": "^3.0.0",
     "cordova-plugin-fetch": "github:elyeandre/cordova-plugin-fetch",
-    "cordova-plugin-file": "^8.1.0",
+    "cordova-plugin-file": "^8.1.3",
     "cordova-plugin-network-information": "^3.0.0",
     "cordova-plugin-statusbar": "^4.0.0",
     "cordova-plugin-x-toast": "^2.7.3"
